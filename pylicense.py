@@ -2,7 +2,11 @@ import xmlrpclib
 
 class PyLicense(object):
   @classmethod
-  def parse_conda_licenses(cls):
+  def get_conda_licenses(cls):
+    """
+    Download and parse continuum webpage with license data
+    """
+
     # make these imports local so we do not need to install libraries if this function is not run
     from bs4 import BeautifulSoup
     import requests
@@ -17,10 +21,10 @@ class PyLicense(object):
   def __init__(self, environment):
     self.environment = environment
     if environment:
-      self.conda_licenses = self.parse_conda_licenses()
+      self.conda_licenses = self.get_conda_licenses()
 
   @classmethod
-  def regularize_license(cls, license):
+  def _regularize_license(cls, license):
     if not license:
       return None
 
@@ -38,7 +42,7 @@ class PyLicense(object):
     info = client.release_data(package, version)
     if not info:
       info = client.release_data(package.title(), version)
-    license = cls.regularize_license(info.get('license'))
+    license = cls._regularize_license(info.get('license'))
     if license:
       return license.rstrip()
 
@@ -61,7 +65,7 @@ class PyLicense(object):
       return ""
 
     if license.startswith("  # "):
-      return license
+      return licensegitx
 
     return "  # " + license
 
@@ -97,6 +101,9 @@ class PyLicense(object):
   _PIP_LINE = ' - pip:'
 
   def process_environment_line(self, line):
+    """
+    Processes a line from environment.yml
+    """
     line = line.rstrip()
     if line.startswith(self._CONDA_PREFIX):
       if line == self._PIP_LINE:
@@ -108,8 +115,18 @@ class PyLicense(object):
       return line
 
   @classmethod
-  def process_pip_line(cls, line):
+  def process_requirements_line(cls, line):
+    """
+    Processes a line from requirements.txt
+    """
     return line.rstrip() + cls._get_pip_license(line)
+
+  def process_stream(self, stream):
+    for line in stream:
+      if args.environment:
+        yield self.process_environment_line(line)
+      else:
+        yield self.process_requirements_line(line)
 
 
 if __name__ == '__main__':
@@ -121,20 +138,14 @@ if __name__ == '__main__':
   parser.add_argument('file', help='dependency file')
   args = parser.parse_args()
 
-  output = []
-
-  with open(args.file) as fh:
+  with open(args.file) as stream:
     pylicense = PyLicense(environment=args.environment)
-    for line in fh:
-      if args.environment:
-        output += [pylicense.process_environment_line(line)]
-      else:
-        output += [pylicense.process_pip_line(line)]
+    output = [o for o in pylicense.process_stream(stream)]
 
+  # must open file to rewrite it
   if args.stdout:
     print "\n".join(output)
   else:
-    # must open file twice to rewrite it
     with open(sys.argv[1], "w") as fh:
       fh.write("\n".join(output))
 
