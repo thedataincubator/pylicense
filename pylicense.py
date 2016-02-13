@@ -128,9 +128,9 @@ class PyLicense(object):
 if __name__ == '__main__':
   import argparse
 
-  parser = argparse.ArgumentParser(description='Adds dependencies to dependency file (i.e. requirements.txt or environment.yml)')
-  parser.add_argument('-e', '--environment', action='store_true', default=False, help='use environment.yml (requirements.txt is default)')
-  parser.add_argument('-s', '--stdout', action='store_true', default=False, help='write output to stdout (default rewrites input file)')
+  parser = argparse.ArgumentParser(description='Adds license information to dependency file (i.e. requirements.txt or environment.yml) as comment')
+  parser.add_argument('-e', '--environment', action='store_true', default=False, help='file is environment.yml format (requirements.txt is default)')
+  parser.add_argument('-s', '--stdout', action='store_true', default=False, help='print new dependency file to stdout (default rewrites input file)')
   parser.add_argument('file', help='dependency file')
   args = parser.parse_args()
 
