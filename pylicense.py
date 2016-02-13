@@ -20,6 +20,7 @@ class PyLicense(object):
 
   def __init__(self, environment):
     self.environment = environment
+    self.client = xmlrpclib.ServerProxy('http://pypi.python.org/pypi')
     if environment:
       self.conda_licenses = self.get_conda_licenses()
 
@@ -37,12 +38,23 @@ class PyLicense(object):
       return license
 
   @classmethod
-  def _get_license(cls, package, version):
-    client = xmlrpclib.ServerProxy('http://pypi.python.org/pypi')
-    info = client.release_data(package, version)
+  def _maybe_license_comment(cls, line, license):
+    if not license:
+      return ""
+
+    if line.endswith(license):
+      return ""
+
+    if license.startswith("  # "):
+      return license
+
+    return "  # " + license
+
+  def _get_license(self, package, version):
+    info = self.client.release_data(package, version)
     if not info:
-      info = client.release_data(package.title(), version)
-    license = cls._regularize_license(info.get('license'))
+      info = self.client.release_data(package.title(), version)
+    license = self._regularize_license(info.get('license'))
     if license:
       return license.rstrip()
 
@@ -56,21 +68,7 @@ class PyLicense(object):
 
     return None
 
-  @classmethod
-  def _maybe_license_comment(cls, line, license):
-    if not license:
-      return ""
-
-    if line.endswith(license):
-      return ""
-
-    if license.startswith("  # "):
-      return licensegitx
-
-    return "  # " + license
-
-  @classmethod
-  def _get_dependency_license(cls, line, dep_sep, num_positions):
+  def _get_dependency_license(self, line, dep_sep, num_positions):
     dependency = line.split('#')[0].strip()
     if not dependency or dependency.startswith('git+https://github.com'):
       return ""
@@ -80,13 +78,12 @@ class PyLicense(object):
       return ""
 
     package, version = dep_array[:2]
-    license = cls._get_license(package, version)
+    license = self._get_license(package, version)
 
-    return cls._maybe_license_comment(line, license)
+    return self._maybe_license_comment(line, license)
 
-  @classmethod
-  def _get_pip_license(cls, line):
-    return cls._get_dependency_license(line, '==', 2)
+  def _get_pip_license(self, line):
+    return self._get_dependency_license(line, '==', 2)
 
   def _get_conda_license(self, line):
     license = self._get_dependency_license(line, '=', 3)
@@ -114,12 +111,11 @@ class PyLicense(object):
     else:
       return line
 
-  @classmethod
-  def process_requirements_line(cls, line):
+  def process_requirements_line(self, line):
     """
     Processes a line from requirements.txt
     """
-    return line.rstrip() + cls._get_pip_license(line)
+    return line.rstrip() + self._get_pip_license(line)
 
   def process_stream(self, stream):
     for line in stream:
