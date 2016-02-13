@@ -30,7 +30,11 @@ def get_license(package, version):
   return None
 
 if __name__ == '__main__':
-  import sys
+  import argparse
+
+  parser = argparse.ArgumentParser(description='Adds dependencies to dependency file (i.e. requirements.txt or environment.yml)')
+  parser.add_argument('-e', '--environment', action='store_true', default=False, help='use environment.yml (requirements.txt is default)')
+  parser.add_argument('file', help='dependency file')
 
   output = []
 
