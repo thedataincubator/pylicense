@@ -32,19 +32,29 @@ def get_license(package, version):
 if __name__ == '__main__':
   import sys
 
+  output = []
+
   with open(sys.argv[1]) as fh:
     for line in fh:
+      line = line.rstrip()
       dependency = line.split('#')[0].strip()
       if dependency and not dependency.startswith('git+https://github.com'):
         try:
           package, version = dependency.split('==')
           license = get_license(package, version)
           if license:
-            print line.rstrip() + "  # " + license
+            license_comment = "  # " + license
+            if line.endswith(license_comment):
+              output += [line]
+            else:
+              output += [line.rstrip() + license_comment]
           else:
-            print line.rstrip()
+            output += [line]
         except ValueError:  # cannot split
-          print line.rstrip()
+          output += [line]
       else:
-        print line.rstrip()
+        output += [line]
+
+  with open(sys.argv[1], "w") as fh:
+    fh.write("\n".join(output))
 
