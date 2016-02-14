@@ -142,6 +142,6 @@ if __name__ == '__main__':
   if args.stdout:
     print "\n".join(output)
   else:
-    with open(sys.argv[1], "w") as fh:
+    with open(args.file, "w") as fh:
       fh.write("\n".join(output))
 
