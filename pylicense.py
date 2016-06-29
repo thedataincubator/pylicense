@@ -11,7 +11,7 @@ class PyLicense(object):
     from bs4 import BeautifulSoup
     import requests
 
-    page = requests.get("http://docs.continuum.io/anaconda/pkg-docs")
+    page = requests.get("https://docs.continuum.io/anaconda/pkg-docs")
     soup = BeautifulSoup(page.text)
     rows = soup.select("table.docutils tr")
     table = [row.select('td') for row in rows]
@@ -20,7 +20,7 @@ class PyLicense(object):
 
   def __init__(self, environment):
     self.environment = environment
-    self.client = xmlrpclib.ServerProxy('http://pypi.python.org/pypi')
+    self.client = xmlrpclib.ServerProxy('https://pypi.python.org/pypi')
     if environment:
       self.conda_licenses = self.get_conda_licenses()
 
