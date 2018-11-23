@@ -57,8 +57,8 @@ class PyLicense(object):
     if line.endswith(license):
       return ""
 
-    if license.startswith("  # "):
-      return license
+    if " #" in line:
+      return ", " + license
 
     return "  # " + license
 
