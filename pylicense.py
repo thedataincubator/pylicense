@@ -1,8 +1,18 @@
+import os
 import xmlrpclib
 
-class PyLicense(object):
+
+class CondaLicenseDownloader(object):
+  """
+  License data is available on anaconda.com for all packages.
+  """
+  LICENSE_URLS = {
+    "py2": "https://docs.anaconda.com/anaconda/packages/old-pkg-lists/4.3.1/py27/",
+    "py3": "https://docs.anaconda.com/anaconda/packages/old-pkg-lists/4.3.1/py35/"
+  }
+
   @classmethod
-  def get_conda_licenses(cls):
+  def get_conda_licenses(cls, environment):
     """
     Download and parse continuum webpage with license data
     """
@@ -11,18 +21,20 @@ class PyLicense(object):
     from bs4 import BeautifulSoup
     import requests
 
-    page = requests.get("https://docs.continuum.io/anaconda/pkg-docs")
-    soup = BeautifulSoup(page.text)
+    url = cls.LICENSE_URLS.get(environment)
+    page = requests.get(url)
+    soup = BeautifulSoup(page.text, "lxml")
     rows = soup.select("table.docutils tr")
     table = [row.select('td') for row in rows]
-    return { row[0].select('a')[0].text: row[2].text.split('/')[-1].strip()
-                for row in table if row and len(row) == 4 }
+    return {row[0].select('a')[0].text: row[2].text.split('/')[-1].strip()
+            for row in table if row and len(row) == 4}
 
+class PyLicense(object):
   def __init__(self, environment):
     self.environment = environment
     self.client = xmlrpclib.ServerProxy('https://pypi.python.org/pypi')
     if environment:
-      self.conda_licenses = self.get_conda_licenses()
+      self.conda_licenses = CondaLicenseDownloader.get_conda_licenses(environment)
 
   @classmethod
   def _regularize_license(cls, license):
@@ -118,6 +130,9 @@ class PyLicense(object):
     return line.rstrip() + self._get_pip_license(line)
 
   def process_stream(self, stream):
+    """
+    Processes lines from stream
+    """
     for line in stream:
       if args.environment:
         yield self.process_environment_line(line)
@@ -129,12 +144,12 @@ if __name__ == '__main__':
   import argparse
 
   parser = argparse.ArgumentParser(description='Adds license information to dependency file (i.e. requirements.txt or environment.yml) as comment')
-  parser.add_argument('-e', '--environment', action='store_true', default=False, help='file is environment.yml format (requirements.txt is default)')
+  parser.add_argument('-e', '--environment', default=False, choices=("py2", "py3"), help="specify value for environment.yml, (requirements.txt is default)")
   parser.add_argument('-s', '--stdout', action='store_true', default=False, help='print new dependency file to stdout (default rewrites input file)')
   parser.add_argument('file', help='dependency file')
   args = parser.parse_args()
 
-  with open(args.file) as stream:
+  with open(os.path.expanduser(args.file)) as stream:
     pylicense = PyLicense(environment=args.environment)
     output = [o for o in pylicense.process_stream(stream)]
 
